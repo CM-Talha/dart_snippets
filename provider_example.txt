@@ -1,0 +1,159 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+class FoodInfo {
+  String? favFoodName;
+  String? favFoodDescription;
+  String? favDrinkWithTheFood;
+
+  FoodInfo({
+    this.favFoodName,
+    this.favFoodDescription,
+    this.favDrinkWithTheFood,
+  });
+
+  factory FoodInfo.fromJson(Map<String, dynamic> json) {
+    return FoodInfo(
+      favFoodName: json['favFoodName'],
+      favFoodDescription: json['favFoodDescription'],
+      favDrinkWithTheFood: json['favDrinkWithTheFood'],
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'favFoodName': favFoodName,
+        'favFoodDescription': favFoodDescription,
+        'favDrinkWithTheFood': favDrinkWithTheFood,
+      };
+}
+
+class FoodInfoProvider with ChangeNotifier {
+  FoodInfo? _foodInfo;
+  List<FoodInfo> _foodInfoList = [
+    FoodInfo(
+      favFoodName: 'Pizza',
+      favFoodDescription: 'Pizza With Tomato Sauce',
+      favDrinkWithTheFood: 'Lemonade',
+    ),
+  ];
+  FoodInfo? get foodInfo => _foodInfo;
+  List<FoodInfo> get foodInfoList => _foodInfoList;
+
+  addFoodInfoList(FoodInfo value) {
+    _foodInfoList.add(value);
+    notifyListeners();
+  }
+
+  saveDetails(
+    GlobalKey<FormState> _formKey,
+    List<FoodInfo> foodsList,
+  ) {
+    _formKey.currentState?.save();
+    var json = foodsList.map((e) => e.toJson()).toList();
+    print(json);
+    notifyListeners();
+  }
+}
+
+class UserInfoScreen extends StatefulWidget {
+  UserInfoScreen({Key? key}) : super(key: key);
+
+  @override
+  State<UserInfoScreen> createState() => _UserInfoScreenState();
+}
+
+class _UserInfoScreenState extends State<UserInfoScreen> {
+  @override
+  Widget build(BuildContext context) {
+    var _formKey = GlobalKey<FormState>();
+    return WillPopScope(
+      onWillPop: () async {
+        ScaffoldMessenger.of(context).clearMaterialBanners();
+        ScaffoldMessenger.of(context).clearSnackBars();
+        return true;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('User Info'),
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            _formKey.currentState?.save();
+            context.read<FoodInfoProvider>().addFoodInfoList(
+                  FoodInfo(
+                    favFoodName: 'Pizza',
+                    favFoodDescription: 'Pizza With Tomato Sauce',
+                    favDrinkWithTheFood: 'Lemonade',
+                  ),
+                );
+            print(context.read<FoodInfoProvider>().foodInfoList.length);
+          },
+          child: Icon(Icons.add),
+        ),
+        body: Form(
+          key: _formKey,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 10),
+            child: ListView(children: [
+              ...context.watch<FoodInfoProvider>().foodInfoList.map((foodInfo) {
+                return ExpansionTile(
+                  initiallyExpanded: false,
+                  title: Text(foodInfo.favFoodName ?? 'ADD FOOD'),
+                  children: [
+                    TextFormField(
+                      initialValue: foodInfo.favFoodName,
+                      onSaved: (String? val) {
+                        foodInfo.favFoodName = val;
+                      },
+                    ),
+                    TextFormField(
+                      initialValue: foodInfo.favFoodDescription,
+                      onSaved: (String? val) {
+                        foodInfo.favFoodDescription = val;
+                      },
+                    ),
+                    TextFormField(
+                      initialValue: foodInfo.favDrinkWithTheFood,
+                      onSaved: (String? val) {
+                        foodInfo.favDrinkWithTheFood = val;
+                      },
+                    ),
+                  ],
+                );
+              }).toList(),
+              Divider(),
+              ElevatedButton(
+                  onPressed: () {
+                    context.read<FoodInfoProvider>().saveDetails(
+                          _formKey,
+                          context.read<FoodInfoProvider>().foodInfoList,
+                        );
+                    ScaffoldMessenger.of(context).showMaterialBanner(
+                      MaterialBanner(
+                        actions: [
+                          TextButton(
+                            child: Text('OK'),
+                            onPressed: () {
+                              ScaffoldMessenger.maybeOf(context)
+                                  ?.clearMaterialBanners();
+                            },
+                          ),
+                        ],
+                        leading: Icon(Icons.check),
+                        content: Text('Saved'),
+                        onVisible: () async {
+                          await Future.delayed(Duration(seconds: 1)).then(
+                              (value) => ScaffoldMessenger.of(context)
+                                  .removeCurrentMaterialBanner());
+                        },
+                      ),
+                    );
+                  },
+                  child: Text('Save')),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+}
